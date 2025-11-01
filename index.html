@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tables Trainer (1–50) – Mr. McLean Math</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --card:#121821;
+    --ink:#e8eef6;
+    --muted:#9bb0c9;
+    --accent:#5cc8ff;
+    --good:#36d399;
+    --bad:#ff6b6b;
+    --warn:#ffd166;
+    --outline:#263041;
+    --shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px;}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  h1{font-size:clamp(18px,3.5vw,28px);margin:0;font-weight:700;letter-spacing:.3px}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .card{background:var(--card);border:1px solid var(--outline);border-radius:14px;box-shadow:var(--shadow);padding:12px}
+  .section{flex:1 1 320px}
+  label{font-size:14px;color:var(--muted)}
+  select,input[type="number"],button{background:#0e141b;border:1px solid var(--outline);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px}
+  button{cursor:pointer}
+  button.primary{background:var(--accent);border-color:transparent;color:#001019;font-weight:700}
+  button.ghost{background:transparent;border-color:var(--outline)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .toggle{display:inline-flex;align-items:center;gap:8px}
+  .toggle input{accent-color:var(--accent)}
+  .pillbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .pill{padding:6px 10px;border:1px solid var(--outline);border-radius:999px;cursor:pointer;font-size:13px;background:#0e141b}
+  .pill.active{background:var(--accent);color:#001019;border-color:transparent}
+  .grid50{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:8px}
+  .cell{padding:8px 0;text-align:center;border:1px solid var(--outline);border-radius:10px;background:#0e141b;cursor:pointer;user-select:none}
+  .cell[aria-pressed="true"]{background:#1d2735;outline:2px solid var(--accent)}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .question{font-size:36px;font-weight:800;letter-spacing:.5px}
+  .qwrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .qinput{min-width:120px;font-size:20px;padding:10px 12px}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--outline);background:#0e141b;color:var(--muted);font-size:12px}
+  .status{display:flex;gap:8px;flex-wrap:wrap}
+  .popup{position:fixed;inset:auto auto 24px 50%;transform:translateX(-50%);padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);font-weight:700;z-index:50}
+  .ok{background:var(--good);color:#002916}
+  .no{background:var(--bad);color:#240000}
+  .hint{background:#0e141b;border:1px dashed var(--outline);border-radius:10px;padding:10px;color:var(--muted);font-size:14px}
+  .flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grow{flex:1 1 auto}
+  .right{margin-left:auto}
+  details{background:#0e141b;border:1px solid var(--outline);border-radius:10px;padding:8px 12px}
+  summary{cursor:pointer}
+  footer{margin-top:24px;color:var(--muted);font-size:13px;text-align:center}
+  /* High contrast */
+  body.hc{--bg:#000;--card:#000;--ink:#fff;--muted:#fff;--accent:#fff;--outline:#fff;--good:#0f0;--bad:#f00}
+  /* Modal */
+  .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.65);z-index:100}
+  .modal.active{display:grid}
+  .modal .sheet{background:var(--card);border:1px solid var(--outline);border-radius:16px;max-width:800px;width:92vw;padding:16px;box-shadow:var(--shadow)}
+  .sheet h2{margin:0 0 6px 0}
+  .sheet p{color:var(--muted);margin:.35rem 0}
+  .kbd{border:1px solid var(--outline);padding:2px 6px;border-radius:6px;background:#0e141b}
+  /* Scratchpad */
+  .padwrap{position:relative;border:1px solid var(--outline);border-radius:12px;overflow:hidden;max-height:360px}
+  canvas{display:block;width:100%;height:280px;background:#0a0e13}
+  .padbar{display:flex;gap:8px;padding:8px;border-top:1px solid var(--outline);background:#0e141b;flex-wrap:wrap}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  @media (max-width:600px){ .question{font-size:28px} .grid50{grid-template-columns:repeat(5,1fr)} }
+</style>
+</head>
+<body>
+<div class="wrap" role="application" aria-label="Tables Trainer">
+  <header>
+    <h1 aria-label="Tables Trainer">Tables Trainer (1–50)</h1>
+    <div class="controls">
+      <label class="toggle" title="High contrast mode">
+        <input id="hcToggle" type="checkbox" aria-label="High contrast mode"> High Contrast
+      </label>
+      <label class="toggle" title="Sound">
+        <input id="soundToggle" type="checkbox" checked aria-label="Sound on or off"> Sound
+      </label>
+      <button id="howToBtn" class="ghost" aria-haspopup="dialog">How to Play</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <!-- MODE & PRESETS -->
+    <section class="card section" aria-labelledby="modeTitle">
+      <div class="flex">
+        <div>
+          <label id="modeTitle">Mode</label><br/>
+          <select id="mode" aria-label="Practice mode">
+            <option value="mul">Multiplication (×)</option>
+            <option value="div">Division (÷)</option>
+            <option value="mix">Mixed (× + ÷)</option>
+          </select>
+        </div>
+        <div>
+          <label>Difficulty preset</label><br/>
+          <select id="preset" aria-label="Difficulty preset">
+            <option value="easy">🟢 Easy (1–10)</option>
+            <option value="med">🟡 Medium (1–20)</option>
+            <option value="hard">🔴 Hard (1–50)</option>
+            <option value="custom" selected>🎲 Mixed (use my selections)</option>
+          </select>
+        </div>
+        <div class="right">
+          <label class="toggle" title="Practice mode shows steps when wrong">
+            <input id="practiceToggle" type="checkbox" checked aria-label="Practice mode"> Practice (Show Steps)
+          </label>
+        </div>
+      </div>
+
+      <div class="pillbar" role="group" aria-label="Quick table ranges">
+        <button class="pill" data-quick="1-10">Tables 1–10</button>
+        <button class="pill" data-quick="11-20">11–20</button>
+        <button class="pill" data-quick="21-30">21–30</button>
+        <button class="pill" data-quick="31-40">31–40</button>
+        <button class="pill" data-quick="41-50">41–50</button>
+        <button class="pill" id="selectAll">Select All</button>
+        <button class="pill" id="clearAll">Clear</button>
+      </div>
+
+      <label style="display:block;margin-top:8px">Select tables (bases) 1–50</label>
+      <div id="grid" class="grid50" role="grid" aria-label="Table selection grid"></div>
+    </section>
+
+    <!-- FACTOR RANGES & SESSION SETTINGS -->
+    <section class="card section" aria-labelledby="rangeTitle">
+      <label id="rangeTitle">Choose factor ranges</label>
+      <div class="pillbar" aria-label="Factor ranges">
+        <label class="pill"><input type="checkbox" class="band" value="1-10" checked> 1–10</label>
+        <label class="pill"><input type="checkbox" class="band" value="11-20"> 11–20</label>
+        <label class="pill"><input type="checkbox" class="band" value="21-30"> 21–30</label>
+        <label class="pill"><input type="checkbox" class="band" value="31-40"> 31–40</label>
+        <label class="pill"><input type="checkbox" class="band" value="41-50"> 41–50</label>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <div class="controls">
+          <div>
+            <label>Question count</label><br/>
+            <select id="qCount" aria-label="Question count">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="custom">Custom…</option>
+              <option value="unlimited">Unlimited</option>
+            </select>
+          </div>
+          <div id="customWrap" style="display:none">
+            <label class="sr-only" for="customCount">Custom count</label><br/>
+            <input id="customCount" type="number" min="1" max="9999" placeholder="Enter count" />
+          </div>
+          <div>
+            <label>Timer</label><br/>
+            <select id="timerSel" aria-label="Timer length">
+              <option value="off">Off</option>
+              <option value="30">30 s</option>
+              <option value="60" selected>60 s</option>
+              <option value="90">90 s</option>
+              <option value="120">120 s</option>
+              <option value="180">180 s</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top:8px">
+          <label class="toggle" title="Auto-check typed answer when it exactly matches the correct value">
+            <input id="instantToggle" type="checkbox" aria-label="Instant check"> Instant Check (auto-verify)
+          </label>
+          <label class="toggle" title="Include both a×b and b×a within the same session">
+            <input id="mirrorsToggle" type="checkbox" aria-label="Include mirror facts" checked> Include mirror facts
+          </label>
+          <span class="badge">Zero facts excluded</span>
+        </div>
+
+        <div class="controls" style="margin-top:12px">
+          <button id="startBtn" class="primary">Start Session</button>
+          <button id="stopBtn" class="ghost" disabled>Stop</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- LIVE SESSION -->
+  <section class="card" id="live" style="margin-top:12px;display:none" aria-live="polite">
+    <div class="flex">
+      <div class="status">
+        <span class="badge" id="modeBadge">Mode: ×</span>
+        <span class="badge" id="timerBadge" title="Time remaining" aria-live="polite">⏱ –</span>
+        <span class="badge" id="countBadge" title="Question number">Q –</span>
+        <span class="badge" id="scoreBadge" title="Score">Score 0</span>
+        <span class="badge" id="streakBadge" title="Streak">Streak 0</span>
+        <span class="badge" id="accBadge" title="Accuracy">Accuracy –</span>
+      </div>
+      <div class="right">
+        <button id="skipBtn" class="ghost" title="Skip this question">Skip</button>
+        <button id="howToBtn2" class="ghost" aria-haspopup="dialog">How to Play</button>
+      </div>
+    </div>
+
+    <div style="margin-top:8px" class="qwrap">
+      <div id="qText" class="question" aria-label="Question">—</div>
+      <label class="sr-only" for="answer">Answer</label>
+      <input id="answer" class="qinput" inputmode="numeric" autocomplete="off" aria-label="Answer input" />
+      <button id="submitBtn" class="primary" aria-label="Submit answer">Submit</button>
+    </div>
+
+    <div id="feedback" class="hint" style="margin-top:8px;display:none"></div>
+    <div id="steps" class="hint" style="margin-top:8px;display:none"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="card" id="summary" style="display:none;margin-top:12px">
+    <h3 style="margin-top:0">Session Summary</h3>
+    <div class="row">
+      <div class="badge">Total: <b id="sumTotal">0</b></div>
+      <div class="badge">Correct: <b id="sumCorrect">0</b></div>
+      <div class="badge">Accuracy: <b id="sumAcc">0%</b></div>
+      <div class="badge">Score: <b id="sumScore">0</b></div>
+      <div class="badge">Time: <b id="sumTime">–</b></div>
+    </div>
+    <details style="margin-top:10px">
+      <summary>Incorrect Answers (<span id="sumWrongN">0</span>) – click to expand</summary>
+      <div id="wrongList" style="margin-top:8px; display:grid; gap:8px"></div>
+    </details>
+  </section>
+
+  <!-- SCRATCHPAD -->
+  <section class="card" aria-label="Scratchpad" style="margin-top:12px">
+    <h3 style="margin:0 0 8px 0">Scratchpad</h3>
+    <div class="padwrap">
+      <canvas id="pad" width="1200" height="600" aria-label="Drawing pad"></canvas>
+      <div class="padbar">
+        <label>Tool:
+          <select id="toolSel" aria-label="Tool">
+            <option value="pen">Pen</option>
+            <option value="eraser">Eraser</option>
+          </select>
+        </label>
+        <label>Size:
+          <input id="sizeSel" type="range" min="2" max="24" value="6" />
+        </label>
+        <label>Color:
+          <input id="colorSel" type="color" value="#ffffff" />
+        </label>
+        <button id="clearPad" class="ghost">Clear</button>
+        <button id="dlPad" class="ghost">Download</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEV TESTS -->
+  <section class="card" style="margin-top:12px" aria-labelledby="devTitle">
+    <h3 id="devTitle" style="margin-top:0">Developer Tests</h3>
+    <div class="controls">
+      <button id="runTests" class="ghost">Run Assertions</button>
+      <span id="testResult" class="badge">—</span>
+    </div>
+    <ul id="testList" style="margin-top:8px;line-height:1.6"></ul>
+  </section>
+
+  <footer>Created by Mr. McLean Math</footer>
+</div>
+
+<!-- MODAL: HOW TO -->
+<div id="howto" class="modal" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+  <div class="sheet">
+    <h2 id="howtoTitle">How to Play</h2>
+    <p>Pick <b>mode</b> (×, ÷, or Mixed), choose the <b>tables</b> (1–50) and <b>factor ranges</b> (1–50). Set a fixed number of questions or a timer. Press <b>Start Session</b>.</p>
+    <p>Answer with your keyboard and press <span class="kbd">Enter</span> or click <b>Submit</b>. Turn on <b>Instant Check</b> if you want answers to verify automatically as soon as the typed value matches exactly.</p>
+    <p>Division uses both forms derived from multiplication facts: <code>56 ÷ 7 = 8</code> and <code>56 ÷ 8 = 7</code> (from <code>7 × 8 = 56</code>).</p>
+    <p>Use the <b>Scratchpad</b> to work things out. At the end, see your <b>Session Summary</b> with accuracy, score, and step-by-step solutions for misses.</p>
+    <div class="flex" style="margin-top:8px">
+      <label class="toggle"><input id="openOnLoad" type="checkbox" checked> Open this on page load</label>
+      <span class="right"></span>
+      <button id="closeHowTo" class="primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup" style="display:none"></div>
+
+<script>
+/* ========= Utilities ========= */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+function beep(ok=true){
+  if(!$('#soundToggle').checked) return;
+  const ctx = new (window.AudioContext||window.webkitAudioContext)();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = ok?'sine':'square';
+  o.frequency.value = ok?880:220;
+  g.gain.value = 0.0001;
+  const now = ctx.currentTime;
+  g.gain.exponentialRampToValueAtTime(0.2, now+.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+.18);
+  o.start();
+  o.stop(now+.2);
+  o.onended = ()=>ctx.close();
+}
+function popup(msg, ok=true){
+  const el = $('#popup');
+  el.textContent = msg;
+  el.className = 'popup '+(ok?'ok':'no');
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 900);
+}
+/* ========= Build Table Grid ========= */
+const grid = $('#grid');
+const selectedTables = new Set();
+function buildGrid(){
+  grid.innerHTML='';
+  for(let i=1;i<=50;i++){
+    const b = document.createElement('button');
+    b.type='button';
+    b.className='cell';
+    b.textContent = i;
+    b.setAttribute('role','gridcell');
+    b.setAttribute('aria-pressed', i<=10 ? 'true':'false'); // default 1–10
+    if(i<=10) selectedTables.add(i);
+    b.addEventListener('click', ()=>{
+      const on = b.getAttribute('aria-pressed')==='true';
+      b.setAttribute('aria-pressed', on?'false':'true');
+      if(on) selectedTables.delete(i); else selectedTables.add(i);
+    });
+    grid.appendChild(b);
+  }
+}
+buildGrid();
+
+/* Quick range buttons */
+function setRange(min,max,add=true){
+  $$('.cell').forEach(btn=>{
+    const n = parseInt(btn.textContent,10);
+    if(n>=min && n<=max){
+      btn.setAttribute('aria-pressed', add?'true':'false');
+      if(add) selectedTables.add(n); else selectedTables.delete(n);
+    }
+  });
+}
+$$('[data-quick]').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    const [a,b]=p.dataset.quick.split('-').map(Number);
+    setRange(a,b,true);
+  });
+});
+$('#selectAll').onclick=()=>{ setRange(1,50,true); };
+$('#clearAll').onclick =()=>{ setRange(1,50,false); };
+
+/* Factor bands */
+function getBands(){
+  const vals=[];
+  $$('.band').forEach(b=>{ if(b.checked) vals.push(b.value); });
+  return vals;
+}
+function bandToNums(band){
+  const [a,b]=band.split('-').map(Number);
+  const arr=[];
+  for(let i=a;i<=b;i++) arr.push(i);
+  return arr;
+}
+function getFactors(){
+  const bands = getBands();
+  const s = new Set();
+  bands.forEach(b=>bandToNums(b).forEach(x=>s.add(x)));
+  return Array.from(s).sort((a,b)=>a-b);
+}
+
+/* Preset behavior */
+$('#preset').addEventListener('change', ()=>{
+  const p = $('#preset').value;
+  if(p==='custom') return;
+  // reset all selections
+  setRange(1,50,false);
+  $$('.band').forEach(x=>x.checked=false);
+  if(p==='easy'){ setRange(1,10,true); $$('.band').forEach(b=>{ if(b.value==='1-10') b.checked=true; }); }
+  if(p==='med'){ setRange(1,20,true); $$('.band').forEach(b=>{ if(b.value==='1-10' || b.value==='11-20') b.checked=true; }); }
+  if(p==='hard'){ setRange(1,50,true); $$('.band').forEach(b=>b.checked=true); }
+});
+
+/* High Contrast */
+$('#hcToggle').addEventListener('change', e=>{
+  document.body.classList.toggle('hc', e.target.checked);
+});
+
+/* Question count vs custom */
+$('#qCount').addEventListener('change', ()=>{
+  $('#customWrap').style.display = ($('#qCount').value==='custom')?'inline-block':'none';
+});
+
+/* How To modal */
+const howto = $('#howto');
+function openHowTo(){ howto.classList.add('active'); $('#closeHowTo').focus(); }
+function closeHowTo(){ howto.classList.remove('active'); }
+$('#howToBtn').onclick=openHowTo;
+$('#howToBtn2').onclick=openHowTo;
+$('#closeHowTo').onclick=closeHowTo;
+howto.addEventListener('click', e=>{ if(e.target===howto) closeHowTo(); });
+window.addEventListener('load', ()=>{ if($('#openOnLoad').checked) openHowTo(); });
+
+/* ========= Session Engine ========= */
+let session=null, timerId=null, timeLeft=0;
+
+function buildPool(){
+  const bases = Array.from(selectedTables).sort((a,b)=>a-b);
+  const factors = getFactors();
+  if(bases.length===0 || factors.length===0) return [];
+  const pool=[];
+  const includeMirrors = $('#mirrorsToggle').checked;
+  for(const b of bases){
+    for(const f of factors){
+      pool.push({a:b,b:f,op:'mul'}); // multiplication fact a×b
+      if(includeMirrors && b!==f) pool.push({a:f,b:b,op:'mul'});
+    }
+  }
+  return pool;
+}
+function mulToDivItems(item){
+  // From a×b=c, produce two division forms
+  const {a,b}=item;
+  const c=a*b;
+  return [
+    {dividend:c, divisor:a, answer:b, form:'A', explain:`${a} × ${b} = ${c}`},
+    {dividend:c, divisor:b, answer:a, form:'B', explain:`${a} × ${b} = ${c}`}
+  ];
+}
+function nextQuestion(){
+  if(!session) return;
+  if(session.timerMode==='off' && session.qDone>=session.qTarget && session.qTarget!=='unlimited'){
+    return endSession('Completed set');
+  }
+  const pool = session.pool;
+  // Choose op based on mode
+  let mode = session.mode;
+  if(mode==='mix'){ mode = Math.random()<0.5 ? 'mul':'div'; }
+
+  const base = pool[rnd(0,pool.length-1)];
+  if(mode==='mul'){
+    const a=base.a, b=base.b, ans=a*b;
+    session.current={mode:'mul', a, b, ans, text:`${a} × ${b} = ?`, steps:`Multiply: ${a} × ${b} = ${ans}`};
+  }else{
+    const forms = mulToDivItems(base);
+    const pick = forms[Math.floor(Math.random()*forms.length)];
+    session.current={mode:'div', dividend:pick.dividend, divisor:pick.divisor, ans:pick.answer,
+      text:`${pick.dividend} ÷ ${pick.divisor} = ?`,
+      steps:`Because ${pick.explain}, ${pick.dividend} ÷ ${pick.divisor} = ${pick.answer}`};
+  }
+  $('#qText').textContent = session.current.text;
+  $('#answer').value='';
+  $('#answer').focus();
+  $('#countBadge').textContent = `Q ${session.qDone+1}`;
+  $('#modeBadge').textContent = `Mode: ${mode==='mul'?'×':mode==='div'?'÷':'Mixed'}`;
+  $('#feedback').style.display='none';
+  $('#steps').style.display='none';
+}
+
+function startTimer(){
+  clearInterval(timerId);
+  if(session.timerMode==='off'){ $('#timerBadge').textContent='⏱ Off'; return; }
+  timeLeft = parseInt(session.timerMode,10);
+  $('#timerBadge').textContent = `⏱ ${timeLeft}s`;
+  timerId = setInterval(()=>{
+    timeLeft--;
+    $('#timerBadge').textContent = `⏱ ${timeLeft}s`;
+    if(timeLeft<=0){
+      clearInterval(timerId);
+      endSession('Time up');
+    }
+  },1000);
+}
+
+function startSession(){
+  const pool = buildPool();
+  if(pool.length===0){ popup('Select at least one table and one factor band', false); return; }
+
+  let qTarget = $('#qCount').value;
+  let timerMode = $('#timerSel').value;
+  if(timerMode!=='off') qTarget='unlimited';
+  if(qTarget==='custom'){
+    const n=parseInt($('#customCount').value,10);
+    if(!n || n<1){ popup('Enter a valid custom count', false); return; }
+    qTarget = n;
+  }
+  session = {
+    mode: $('#mode').value, // mul / div / mix
+    pool, qTarget, timerMode,
+    qDone:0, correct:0, score:0, streak:0, startedAt:performance.now(),
+    wrong:[], history:[]
+  };
+  $('#live').style.display='block';
+  $('#summary').style.display='none';
+  $('#startBtn').disabled=true; $('#stopBtn').disabled=false;
+  $('#skipBtn').disabled=false;
+  startTimer();
+  updateStatus();
+  nextQuestion();
+}
+function endSession(reason){
+  if(!session) return;
+  clearInterval(timerId);
+  $('#startBtn').disabled=false; $('#stopBtn').disabled=true; $('#skipBtn').disabled=true;
+  const elapsed = Math.round((performance.now()-session.startedAt)/1000);
+  const total = session.qDone;
+  const acc = total? Math.round(100*session.correct/total):0;
+  $('#sumTotal').textContent=total;
+  $('#sumCorrect').textContent=session.correct;
+  $('#sumAcc').textContent=acc+'%';
+  $('#sumScore').textContent=session.score;
+  $('#sumTime').textContent=elapsed+' s';
+  $('#sumWrongN').textContent=session.wrong.length;
+  const wl = $('#wrongList'); wl.innerHTML='';
+  session.wrong.forEach(w=>{
+    const row = document.createElement('div');
+    row.className='hint';
+    row.textContent = `${w.text}  Your answer: ${w.given}   Correct: ${w.ans}`;
+    const steps = document.createElement('div');
+    steps.style.marginTop='6px'; steps.style.color='#c9d7e8'; steps.textContent = w.steps;
+    row.appendChild(steps);
+    wl.appendChild(row);
+  });
+  $('#summary').style.display='block';
+  popup(reason, true);
+  session=null;
+}
+function updateStatus(){
+  if(!session){ $('#scoreBadge').textContent='Score 0'; $('#streakBadge').textContent='Streak 0'; $('#accBadge').textContent='Accuracy –'; return; }
+  const total = session.qDone;
+  const acc = total? Math.round(100*session.correct/total):0;
+  $('#scoreBadge').textContent = `Score ${session.score}`;
+  $('#streakBadge').textContent = `Streak ${session.streak}`;
+  $('#accBadge').textContent = `Accuracy ${acc}%`;
+}
+function submitAnswer(){
+  if(!session || !session.current) return;
+  const raw = $('#answer').value.trim();
+  if(raw==='') return; // nothing
+  const val = Number(raw);
+  if(!Number.isFinite(val)){ popup('Numbers only', false); return; }
+  const ok = (val === session.current.ans);
+  session.qDone++;
+  if(ok){
+    beep(true);
+    const bonus = clamp(session.streak*2,0,10);
+    session.score += (10 + bonus);
+    session.streak++;
+    $('#feedback').style.display='block';
+    $('#feedback').style.color='#002916';
+    $('#feedback').style.background = '#102e21';
+    $('#feedback').textContent = 'Correct!';
+    popup('Correct ✓', true);
+  }else{
+    beep(false);
+    session.streak=0;
+    $('#feedback').style.display='block';
+    $('#feedback').style.color='#3b0000';
+    $('#feedback').style.background='#2b0b0b';
+    $('#feedback').textContent = `Incorrect. Correct answer: ${session.current.ans}`;
+    if($('#practiceToggle').checked){
+      $('#steps').style.display='block';
+      $('#steps').textContent = session.current.steps;
+    }
+    session.wrong.push({
+      text: session.current.text, ans: session.current.ans, given: val, steps: session.current.steps
+    });
+    popup('Incorrect ✗', false);
+  }
+  if(ok) session.correct++;
+  updateStatus();
+  if(session && (session.timerMode==='off') && (session.qTarget!=='unlimited') && (session.qDone>=session.qTarget)){
+    return endSession('Completed set');
+  }
+  // schedule next
+  setTimeout(()=>{ if(session) nextQuestion(); }, 150);
+}
+/* Instant Check */
+$('#answer').addEventListener('input', ()=>{
+  if(!$('#instantToggle').checked) return;
+  if(!session || !session.current) return;
+  const t = $('#answer').value.trim();
+  if(t==='' || !/^-?\d+$/.test(t)) return;
+  if(Number(t)===session.current.ans){
+    submitAnswer();
+  }
+});
+
+/* Controls */
+$('#startBtn').onclick=startSession;
+$('#stopBtn').onclick=()=>endSession('Stopped');
+$('#skipBtn').onclick=()=>{
+  if(!session) return;
+  session.qDone++; session.streak=0;
+  updateStatus();
+  nextQuestion();
+};
+$('#submitBtn').onclick=submitAnswer;
+$('#answer').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); submitAnswer(); }
+});
+
+/* ========= Scratchpad ========= */
+const pad = $('#pad');
+const ctx = pad.getContext('2d');
+let drawing=false, last=[0,0];
+function pos(e){
+  const r = pad.getBoundingClientRect();
+  const x = (e.touches?e.touches[0].clientX:e.clientX) - r.left;
+  const y = (e.touches?e.touches[0].clientY:e.clientY) - r.top;
+  // scale to canvas size
+  return [x * (pad.width/r.width), y * (pad.height/r.height)];
+}
+function stroke(e){
+  if(!drawing) return;
+  const [x,y]=pos(e);
+  const size = parseInt($('#sizeSel').value,10);
+  if($('#toolSel').value==='eraser'){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.lineWidth=size+6;
+  }else{
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle=$('#colorSel').value;
+    ctx.lineWidth=size;
+  }
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(...last); ctx.lineTo(x,y); ctx.stroke();
+  last=[x,y];
+}
+pad.addEventListener('mousedown',e=>{ drawing=true; last=pos(e); });
+pad.addEventListener('mousemove',stroke);
+pad.addEventListener('mouseup',()=>drawing=false);
+pad.addEventListener('mouseleave',()=>drawing=false);
+pad.addEventListener('touchstart',e=>{ drawing=true; last=pos(e); e.preventDefault(); },{passive:false});
+pad.addEventListener('touchmove',e=>{ stroke(e); e.preventDefault(); },{passive:false});
+pad.addEventListener('touchend',()=>drawing=false);
+$('#clearPad').onclick=()=>{ ctx.clearRect(0,0,pad.width,pad.height); };
+$('#dlPad').onclick=()=>{
+  const a=document.createElement('a');
+  a.download='scratchpad.png';
+  a.href=pad.toDataURL('image/png');
+  a.click();
+};
+
+/* ========= Dev Tests ========= */
+function assert(name, fn){
+  try{ const ok = fn(); return {name, ok, msg: ok?'OK':'FAIL'}; }
+  catch(e){ return {name, ok:false, msg:'ERR: '+e.message}; }
+}
+$('#runTests').onclick=()=>{
+  const list = [
+    assert('Pool builds for default 1–10', ()=>{ setRange(1,50,false); setRange(1,10,true); $$('.band').forEach(b=>b.checked=(b.value==='1-10')); return buildPool().length>0; }),
+    assert('Band union correct size (1–10 only)', ()=>{ const f=getFactors(); return f.length===10 && f[0]===1 && f[9]===10; }),
+    assert('Division answers are integers', ()=>{
+      const pool=buildPool(); for(let i=0;i<30;i++){ const base=pool[rnd(0,pool.length-1)]; const forms=mulToDivItems(base); if(forms.some(x=>forms.dividend%forms.divisor!==0)) return false; }
+      return true;
+    }),
+    assert('Mirrors toggle adds extra items', ()=>{
+      setRange(1,2,false); setRange(2,3,true); $$('.band').forEach(b=>b.checked=(b.value==='1-10'));
+      $('#mirrorsToggle').checked=false; const a=buildPool().length;
+      $('#mirrorsToggle').checked=true;  const b=buildPool().length;
+      return b>=a;
+    }),
+    assert('Timer off keeps badge Off', ()=>{
+      $('#timerSel').value='off';
+      startSession(); const ok=$('#timerBadge').textContent.includes('Off'); endSession('test'); return ok;
+    }),
+    assert('Custom count must be valid', ()=>{
+      $('#qCount').value='custom'; $('#customWrap').style.display='inline-block'; $('#customCount').value=''; let blocked=false;
+      const old=popup; popup=(m)=>{blocked = (m.includes('valid'))}; startSession(); popup=old; return blocked;
+    }),
+    assert('Instant check default Off', ()=>!$('#instantToggle').checked),
+    assert('Score increases with streak bonus', ()=>{
+      // simulate short session
+      setRange(1,1,false); setRange(2,2,true); $$('.band').forEach(b=>b.checked=(b.value==='1-10'));
+      $('#timerSel').value='off'; $('#qCount').value='10';
+      startSession();
+      const baseScore=session.score;
+      const ans1=session.current.ans; $('#answer').value=String(ans1); submitAnswer();
+      const ans2=session.current.ans; $('#answer').value=String(ans2); submitAnswer();
+      const grew = session.score>baseScore+10; // second should have some streak bonus
+      endSession('test'); return grew;
+    }),
+    assert('Accuracy calc safe on zero total', ()=>{
+      updateStatus(); return $('#accBadge').textContent.includes('Accuracy');
+    }),
+    assert('Skip increases Q done', ()=>{
+      setRange(1,1,false); setRange(3,3,true); $$('.band').forEach(b=>b.checked=(b.value==='1-10'));
+      $('#timerSel').value='off'; $('#qCount').value='10';
+      startSession(); const before = session.qDone; $('#skipBtn').click(); const after=session.qDone; endSession('test'); return after===before+1;
+    }),
+    assert('Summary renders after end', ()=>{
+      setRange(1,1,false); setRange(4,4,true); $$('.band').forEach(b=>b.checked=(b.value==='1-10'));
+      $('#timerSel').value='30'; // timer forces unlimited
+      startSession(); endSession('test'); return $('#summary').style.display==='block';
+    })
+  ];
+  const ul = $('#testList'); ul.innerHTML='';
+  let pass=0;
+  list.forEach((r,i)=>{
+    const li=document.createElement('li');
+    li.textContent = `${i+1}. ${r.name} — ${r.ok?'PASS':'FAIL'} (${r.msg})`;
+    li.style.color = r.ok ? '#7dffaf' : '#ff7d7d';
+    ul.appendChild(li);
+    if(r.ok) pass++;
+  });
+  $('#testResult').textContent = `${pass}/${list.length} passed`;
+};
+
+/* ========= Defaults ========= */
+/* On load defaults per spec: tables 1–10 selected, factors 1–10 checked, mode mul, Instant Check OFF */
+$('#mode').value='mul';
+$('#instantToggle').checked=false;
+$('#mirrorsToggle').checked=true;
+$('#timerSel').value='60';
+$('#qCount').value='10';
+
+/* Accessibility small tweaks */
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape' && howto.classList.contains('active')) closeHowTo();
+});
+</script>
+</body>
+</html>
