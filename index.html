@@ -281,6 +281,23 @@
     border:0;
   }
 
+  .results{
+    margin-top:10px;
+    border-top:1px solid var(--outline);
+    padding-top:10px;
+  }
+  .results .rowline{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:6px 0;
+    border-bottom:1px dashed var(--outline);
+    color:var(--muted);
+    font-size:14px;
+  }
+  .results .rowline b{color:var(--ink)}
+  .results small{color:var(--muted)}
+
   @media (max-width:700px){
     .question-cards{
       flex-wrap:wrap;
@@ -330,6 +347,13 @@
             <option value="180">180 s</option>
           </select>
         </div>
+        <div>
+          <label>Session</label><br>
+          <select id="sessionType">
+            <option value="mastery" selected>Mastery (finish set)</option>
+            <option value="endless">Endless practice</option>
+          </select>
+        </div>
       </div>
 
       <div class="pillbar" style="margin-top:8px">
@@ -360,6 +384,10 @@
         <label class="toggle">
           <input id="mirrorsToggle" type="checkbox" checked> Include mirror facts
         </label>
+      </div>
+
+      <div class="hint" style="margin-top:10px">
+        <b>Mastery mode:</b> the game ends after the selected set is completed. Any wrong facts repeat until correct.
       </div>
     </section>
   </div>
@@ -420,13 +448,26 @@
 <div id="howto" class="modal" role="dialog" aria-modal="true">
   <div class="sheet">
     <h2>How to Play</h2>
-    <p>Select a <b>mode</b>, choose which <b>tables</b> (1–20) you want, and a <b>max factor</b> (for example “up to 11” means 1–11). The game runs automatically.</p>
-    <p>Multiplication: each factor is shown inside a card with its blocks. After a correct answer, you’ll see that many groups, each containing the second factor as blocks.</p>
-    <p>Division: the problem uses a circle cut into slices equal to the divisor. After a correct answer, each slice is filled and labelled with the quotient.</p>
+    <p>Select a <b>mode</b>, choose which <b>tables</b> (1–20) you want, and a <b>max factor</b> (for example “up to 11” means 1–11).</p>
+    <p><b>Mastery (finish set)</b>: you complete each selected fact once. Any wrong fact repeats until you get it right. Then you see a summary.</p>
+    <p><b>Endless practice</b>: keeps going forever (good for warmups).</p>
     <p>Type the answer and press <span class="kbd">Enter</span> or click <b>Submit</b>. After feedback and visuals, press <span class="kbd">Enter</span> again or click <b>Next</b> for the next fact.</p>
     <div class="flex" style="margin-top:8px">
       <span class="right"></span>
       <button id="closeHowTo" class="primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS MODAL -->
+<div id="resultsModal" class="modal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Session Complete</h2>
+    <p id="resultsSummary">Nice work!</p>
+    <div id="resultsList" class="results"></div>
+    <div class="flex" style="margin-top:10px">
+      <button id="restartBtn" class="primary">Start New Session</button>
+      <button id="closeResults" class="ghost right">Close</button>
     </div>
   </div>
 </div>
@@ -474,8 +515,20 @@ $('#howToBtn2').onclick = ()=>{howto.classList.add('active');};
 $('#closeHowTo').onclick = ()=>{howto.classList.remove('active');};
 howto.addEventListener('click',e=>{ if(e.target===howto) howto.classList.remove('active'); });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape') howto.classList.remove('active');
+  if(e.key==='Escape') {
+    howto.classList.remove('active');
+    $('#resultsModal').classList.remove('active');
+  }
 });
+
+/* Results modal */
+const resultsModal = $('#resultsModal');
+$('#closeResults').onclick = ()=>{ resultsModal.classList.remove('active'); };
+resultsModal.addEventListener('click',e=>{ if(e.target===resultsModal) resultsModal.classList.remove('active'); });
+$('#restartBtn').onclick = ()=>{
+  resultsModal.classList.remove('active');
+  startSession();
+};
 
 /* TABLE GRID */
 const selectedTables = new Set();
@@ -589,6 +642,15 @@ function drawCircle(divisor, filled, label){
 let session=null;
 let timerId=null;
 
+function factKey(item){
+  if(item.kind==='mul') return 'mul:' + item.a + 'x' + item.b;
+  return 'div:' + item.dividend + '÷' + item.divisor;
+}
+function prettyFact(item){
+  if(item.kind==='mul') return item.a + ' × ' + item.b;
+  return item.dividend + ' ÷ ' + item.divisor;
+}
+
 function buildPool(mode){
   const bases = Array.from(selectedTables).sort((a,b)=>a-b);
   let maxF=parseInt($('#maxFactor').value,10);
@@ -633,7 +695,13 @@ function updateBadges(){
   $('#scoreBadge').textContent='Score '+session.score;
   $('#streakBadge').textContent='Streak '+session.streak;
   $('#accBadge').textContent='Accuracy '+acc+'%';
-  $('#countBadge').textContent='Q '+(session.asked+1);
+
+  if(session.sessionType==='mastery'){
+    const done = session.totalUnique - session.remaining.length;
+    $('#countBadge').textContent = 'Done ' + done + '/' + session.totalUnique;
+  }else{
+    $('#countBadge').textContent = 'Q ' + (session.asked+1);
+  }
 }
 
 function startTimer(){
@@ -669,13 +737,13 @@ function showQuestion(item){
   $('#answerVisual').style.display='none';
   $('#divisionVisual').style.display='none';
   $('#feedback').style.display='none';
+  $('#eqText').textContent='= ?';
 
   if(item.kind==='mul'){
     $('#modeBadge').textContent='Mode: ×';
     $('#opSymbol').textContent='×';
     $('#numA').textContent=item.a;
     $('#numB').textContent=item.b;
-    $('#eqText').textContent='= ?';
     makeBlocks($('#blocksA'),item.a);
     makeBlocks($('#blocksB'),item.b);
   }else{
@@ -683,7 +751,6 @@ function showQuestion(item){
     $('#opSymbol').textContent='÷';
     $('#numA').textContent=item.dividend;
     $('#numB').textContent=item.divisor;
-    $('#eqText').textContent='= ?';
     $('#blocksA').innerHTML='';
     $('#blocksB').innerHTML='';
     drawCircle(item.divisor,false,null);
@@ -691,16 +758,74 @@ function showQuestion(item){
   }
 }
 
+function showResultsAndEnd(){
+  if(!session) return;
+
+  const unique = session.totalUnique;
+  const asked = session.asked;
+  const correct = session.correct;
+  const acc = asked ? Math.round(100*correct/asked) : 0;
+
+  // Collect missed facts (wrongAttempts > 0)
+  const missed = [];
+  for(const [k,st] of session.stats.entries()){
+    if(st.wrongAttempts>0){
+      missed.push(st);
+    }
+  }
+  missed.sort((a,b)=>b.wrongAttempts-a.wrongAttempts || a.display.localeCompare(b.display));
+
+  $('#resultsSummary').textContent =
+    'Completed: ' + unique + ' facts. Attempts: ' + asked + '. Accuracy: ' + acc + '%.';
+
+  const list = $('#resultsList');
+  list.innerHTML = '';
+
+  if(missed.length===0){
+    const div=document.createElement('div');
+    div.className='rowline';
+    div.innerHTML = '<b>Perfect!</b><span>0 missed facts</span>';
+    list.appendChild(div);
+    const small=document.createElement('p');
+    small.innerHTML = '<small>Nice. You got every fact correct on the first try.</small>';
+    list.appendChild(small);
+  }else{
+    const head=document.createElement('p');
+    head.innerHTML = '<small>Facts that were missed at least once (they repeated until correct):</small>';
+    list.appendChild(head);
+
+    missed.forEach(st=>{
+      const line=document.createElement('div');
+      line.className='rowline';
+      line.innerHTML = '<span><b>' + st.display + '</b> = ' + st.ans + '</span><span>Missed ' + st.wrongAttempts + ' time(s)</span>';
+      list.appendChild(line);
+    });
+  }
+
+  resultsModal.classList.add('active');
+  endSession();
+}
+
 function nextQuestion(){
   if(!session) return;
+
   if(session.remaining.length===0){
-    popup('You completed all selected facts! New round starting.',true);
-    session.remaining = buildPool(session.mode).slice();
+    if(session.sessionType==='endless'){
+      popup('New round starting.',true);
+      session.remaining = session.pool.slice();
+      // In endless, we can reshuffle by just continuing random selection (pool is same)
+    }else{
+      popup('All facts mastered!',true);
+      showResultsAndEnd();
+      return;
+    }
   }
+
   const idx = rnd(0,session.remaining.length-1);
   const item = session.remaining[idx];
   session.remaining.splice(idx,1);
   session.current=item;
+
   updateBadges();
   showQuestion(item);
   $('#submitBtn').disabled=false;
@@ -716,9 +841,17 @@ function startSession(){
     session=null;
     return;
   }
+
+  const sessionType = $('#sessionType').value;
+
+  // Mastery: treat each pool entry as a unique "fact to master once".
+  // Endless: keep original behavior.
   session={
     mode,
-    remaining:pool.slice(),
+    sessionType,
+    pool: pool.slice(),
+    remaining: pool.slice(),
+    totalUnique: pool.length,
     asked:0,
     correct:0,
     score:0,
@@ -726,8 +859,10 @@ function startSession(){
     timerMode:$('#timerSel').value,
     timeLeft:0,
     current:null,
-    awaitNext:false
+    awaitNext:false,
+    stats: new Map() // key -> {display, ans, wrongAttempts}
   };
+
   $('#live').style.display='block';
   startTimer();
   nextQuestion();
@@ -740,6 +875,8 @@ function endSession(){
 }
 
 function autoRestart(){
+  // If results modal is open, close it on restart
+  resultsModal.classList.remove('active');
   startSession();
 }
 
@@ -774,10 +911,24 @@ function submitAnswer(){
   const raw=$('#answer').value.trim();
   if(raw==='') return;
   if(!/^-?\d+$/.test(raw)){ popup('Numbers only',false); return; }
+
   const val=Number(raw);
-  const ans=session.current.ans;
+  const item=session.current;
+  const ans=item.ans;
   const ok = (val===ans);
+
   session.asked++;
+
+  // Track stats per fact
+  const k = factKey(item);
+  if(!session.stats.has(k)){
+    session.stats.set(k,{
+      display: prettyFact(item),
+      ans: ans,
+      wrongAttempts: 0
+    });
+  }
+  const st = session.stats.get(k);
 
   $('#eqText').textContent='= '+ans;
 
@@ -789,21 +940,30 @@ function submitAnswer(){
     $('#feedback').style.background='#102e21';
     $('#feedback').style.color='#c6ffe1';
     $('#feedback').textContent='Correct!';
-    if(session.current.kind==='mul'){
-      showMulAnswer(session.current.a,session.current.b);
+    if(item.kind==='mul'){
+      showMulAnswer(item.a,item.b);
     }else{
-      showDivAnswer(session.current.divisor,session.current.ans);
+      showDivAnswer(item.divisor,item.ans);
     }
   }else{
     beep(false);
     session.streak=0;
+    st.wrongAttempts++;
+
     $('#feedback').style.display='block';
     $('#feedback').style.background='#2b0b0b';
     $('#feedback').style.color='#ffd5d5';
     $('#feedback').textContent='Incorrect. Correct answer: '+ans;
+
+    // IMPORTANT CHANGE:
+    // In Mastery mode, wrong facts must come back until correct.
+    // In Endless mode, we also bring it back (keeps behavior similar, but harmless).
+    session.remaining.push(item);
   }
+
   if(ok) session.correct++;
   updateBadges();
+
   session.awaitNext=true;
   $('#submitBtn').disabled=true;
   $('#nextBtn').disabled=false;
@@ -847,6 +1007,7 @@ $('#answer').addEventListener('keydown',e=>{
 $('#mode').addEventListener('change',autoRestart);
 $('#maxFactor').addEventListener('change',autoRestart);
 $('#mirrorsToggle').addEventListener('change',autoRestart);
+$('#sessionType').addEventListener('change',autoRestart);
 $('#timerSel').addEventListener('change',()=>{
   if(session) startTimer(); else startSession();
 });
