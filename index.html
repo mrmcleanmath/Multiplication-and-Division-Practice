@@ -660,6 +660,8 @@ function buildPool(mode){
 
   if(bases.length===0) return [];
   const mirrors = $('#mirrorsToggle').checked;
+
+  // Multiplication facts (honor mirrors)
   const mulFacts=[];
   for(const a of bases){
     for(let b=1;b<=maxF;b++){
@@ -667,19 +669,28 @@ function buildPool(mode){
       if(mirrors && a!==b) mulFacts.push({a:b,b:a});
     }
   }
+
   const pool=[];
+
   if(mode==='mul' || mode==='mix'){
     mulFacts.forEach(f=>{
       pool.push({kind:'mul',a:f.a,b:f.b,ans:f.a*f.b});
     });
   }
+
   if(mode==='div' || mode==='mix'){
-    mulFacts.forEach(f=>{
-      const a=f.a,b=f.b,c=a*b;
-      pool.push({kind:'div',dividend:c,divisor:a,ans:b});
-      pool.push({kind:'div',dividend:c,divisor:b,ans:a});
-    });
+    // IMPORTANT FIX:
+    // For division practice, the selected base must be the DIVISOR.
+    // If base is 7, we generate: (7*b) ÷ 7 = b
+    // We do NOT generate the "other way" ((7*b) ÷ b = 7), because that makes the selected base the answer.
+    for(const base of bases){
+      for(let b=1;b<=maxF;b++){
+        const c = base*b;
+        pool.push({kind:'div',dividend:c,divisor:base,ans:b});
+      }
+    }
   }
+
   return pool;
 }
 
@@ -955,7 +966,6 @@ function submitAnswer(){
     $('#feedback').style.color='#ffd5d5';
     $('#feedback').textContent='Incorrect. Correct answer: '+ans;
 
-    // IMPORTANT CHANGE:
     // In Mastery mode, wrong facts must come back until correct.
     // In Endless mode, we also bring it back (keeps behavior similar, but harmless).
     session.remaining.push(item);
