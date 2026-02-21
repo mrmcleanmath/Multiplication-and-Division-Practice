@@ -274,7 +274,7 @@
     width:1px;
     height:1px;
     padding:0;
-    margin:-1px;
+    margin:1px;
     overflow:hidden;
     clip:rect(0,0,0,0);
     white-space:nowrap;
@@ -374,7 +374,8 @@
       <div class="controls" style="margin-top:4px">
         <div>
           <label for="maxFactor">Up to</label><br>
-          <input id="maxFactor" type="number" min="1" max="12" value="10" style="width:90px">
+          <!-- CHANGED DEFAULT to 12 -->
+          <input id="maxFactor" type="number" min="1" max="12" value="12" style="width:90px">
         </div>
       </div>
       <div class="controls" style="margin-top:8px">
@@ -382,7 +383,8 @@
           <input id="instantToggle" type="checkbox"> Instant Check
         </label>
         <label class="toggle">
-          <input id="mirrorsToggle" type="checkbox" checked> Include mirror facts
+          <!-- CHANGED DEFAULT to unchecked -->
+          <input id="mirrorsToggle" type="checkbox"> Include mirror facts
         </label>
       </div>
 
@@ -679,10 +681,7 @@ function buildPool(mode){
   }
 
   if(mode==='div' || mode==='mix'){
-    // IMPORTANT FIX:
     // For division practice, the selected base must be the DIVISOR.
-    // If base is 7, we generate: (7*b) ÷ 7 = b
-    // We do NOT generate the "other way" ((7*b) ÷ b = 7), because that makes the selected base the answer.
     for(const base of bases){
       for(let b=1;b<=maxF;b++){
         const c = base*b;
@@ -824,7 +823,6 @@ function nextQuestion(){
     if(session.sessionType==='endless'){
       popup('New round starting.',true);
       session.remaining = session.pool.slice();
-      // In endless, we can reshuffle by just continuing random selection (pool is same)
     }else{
       popup('All facts mastered!',true);
       showResultsAndEnd();
@@ -855,8 +853,6 @@ function startSession(){
 
   const sessionType = $('#sessionType').value;
 
-  // Mastery: treat each pool entry as a unique "fact to master once".
-  // Endless: keep original behavior.
   session={
     mode,
     sessionType,
@@ -871,7 +867,7 @@ function startSession(){
     timeLeft:0,
     current:null,
     awaitNext:false,
-    stats: new Map() // key -> {display, ans, wrongAttempts}
+    stats: new Map()
   };
 
   $('#live').style.display='block';
@@ -886,7 +882,6 @@ function endSession(){
 }
 
 function autoRestart(){
-  // If results modal is open, close it on restart
   resultsModal.classList.remove('active');
   startSession();
 }
@@ -930,7 +925,6 @@ function submitAnswer(){
 
   session.asked++;
 
-  // Track stats per fact
   const k = factKey(item);
   if(!session.stats.has(k)){
     session.stats.set(k,{
@@ -966,8 +960,6 @@ function submitAnswer(){
     $('#feedback').style.color='#ffd5d5';
     $('#feedback').textContent='Incorrect. Correct answer: '+ans;
 
-    // In Mastery mode, wrong facts must come back until correct.
-    // In Endless mode, we also bring it back (keeps behavior similar, but harmless).
     session.remaining.push(item);
   }
 
